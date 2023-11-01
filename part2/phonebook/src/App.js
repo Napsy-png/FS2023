@@ -2,16 +2,11 @@ import { useState, useEffect } from 'react'
 import Content from './components/Content'
 import Filter from './components/Filter'
 import Form from './components/Form'
+import contacts from './services/contacts'
 
 const App = () => {
 
-  const [persons, setPersons] = useState([
-    { name: 'Arto Hellas', number: '040-123456', id: 1 },
-    { name: 'Ada Lovelace', number: '39-44-5323523', id: 2 },
-    { name: 'Dan Abramov', number: '12-43-234345', id: 3 },
-    { name: 'Mary Poppendieck', number: '39-23-6423122', id: 4 }
-  ])
-
+  const [persons, setPersons] = useState([])
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
   const [filterVal, setFilterVal] = useState('')
@@ -20,48 +15,72 @@ const App = () => {
   const setName = (event) => setNewName(event.target.value)
   const setNumber = (event) => setNewNumber(event.target.value)
 
-
+  useEffect(() => {
+    contacts.getAll()
+      .then(response => {
+        setPersons(response)
+      })
+  }, [])
 
   useEffect(() => {
     const handleFilter = () => {
       setFilteredNames(!filterVal.length ? persons
         : persons.filter(person => person.name.toLowerCase().includes(filterVal.toLowerCase())))
     }
+
     handleFilter()
   }, [filterVal, persons])
 
-
+  const deletePerson = (id, name) => {
+    if (window.confirm(`Are you sure you want to delete ${name}`)) {
+      contacts.remove(id)
+        .then(() => {
+          setPersons(persons.filter(person => person.id !== id))
+        })
+        .catch(() => {
+          window.alert("Oops, a problem occurred.")
+        })
+    }
+  }
 
   const handleSubmit = (event) => {
 
     event.preventDefault()
-    const dto = { name: newName, number: newNumber, id: persons[persons.length - 1].id + 1 }
+    const personObject = { name: newName, number: newNumber, id: persons[persons.length - 1].id + 1 }
     let isSame
 
     persons.forEach(person => {
-      dto.name === person.name ? isSame = true : isSame = false
+      personObject.name === person.name ? isSame = true : isSame = false
     });
 
-    if (!isSame) {
-      setPersons(persons.concat(dto))
-    } else {
-      window.alert(`${newName} is already added to the phonebook`)
+    if (isSame) {
+      window.confirm(`${personObject.name} is already added to the phonebook. Replace the old number with a new one?`)
+      let target = persons.find(p => p.name === personObject.name)
+      contacts
+        .update(personObject, target.id)
+        .then(response => setPersons(persons.map(person => person.id !== target.id ? person : response)))
+    }
+    else {
+      contacts.add(personObject)
+        .then(response => {
+          setPersons(persons.concat(response))
+          setNewName('')
+          setNewNumber('')
+
+        })
     }
   }
 
   const handleSearchValue = (e) => setFilterVal(e.target.value)
-
-
-
 
   return (
     <div>
       <h2>Phonebook</h2>
       <Filter handler={handleSearchValue} />
       <h2>add a new</h2>
-      <Form setName={setName} setNumber={setNumber} handler={handleSubmit} />
+      <Form name={newName} number={newNumber} setName={setName} setNumber={setNumber} handler={handleSubmit} />
       <h2>Numbers</h2>
-      <Content persons={filteredNames} />
+      <Content persons={filteredNames} handleDelete={deletePerson} />
     </div>
   )
 }

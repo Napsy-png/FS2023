@@ -1,16 +1,16 @@
-const Form = ({setName, setNumber, handler}) => (
-    <>
+const Form = ({ setName, setNumber, name, number, handler }) => (
+  <>
     <form>
       <div>
-        name: <input onChange={setName}/>
+        name: <input value={name} onChange={setName} />
       </div>
       <div>
-        number: <input onChange={setNumber}/>
+        number: <input value={number} onChange={setNumber} />
       </div>
       <div>
         <button type="submit" onClick={handler}>add</button>
       </div>
     </form>
-    </>
+  </>
 )
 export default Form;
